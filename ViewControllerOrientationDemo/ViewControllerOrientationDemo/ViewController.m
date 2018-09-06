@@ -52,7 +52,7 @@
 }
 
 /**
- 允许字段旋转
+ 支持旋转
  */
 - (BOOL)shouldAutorotate {
     return YES;
@@ -65,10 +65,14 @@
     return UIInterfaceOrientationMaskPortrait | UIInterfaceOrientationMaskLandscapeLeft | UIInterfaceOrientationMaskLandscapeRight;
 }
 
+- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
+    NSLog(@"更换方向\n size=%@ \n coordinator = %@",NSStringFromCGSize(size),coordinator);
+}
+
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     UIInterfaceOrientation orientation = [[UIApplication sharedApplication] statusBarOrientation];
-    
+
     if (orientation == UIInterfaceOrientationPortrait || orientation == UIInterfaceOrientationPortraitUpsideDown) {
         self.orientationLabel.text = @"竖屏";
         self.isPortrait = YES;
@@ -79,6 +83,8 @@
         self.orientationLabel.text = @"未知";
         self.isPortrait = NO;
     }
+    
+    NSLog(@"layout subviews");
 }
 
 @end
