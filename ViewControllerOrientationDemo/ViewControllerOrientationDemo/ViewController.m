@@ -31,6 +31,7 @@
 }
 
 - (void)didClickOrientationButton {
+    
     UIInterfaceOrientation orientation ;
     if (self.isPortrait == YES) {
         orientation = UIInterfaceOrientationLandscapeRight;
@@ -44,14 +45,53 @@
  切换当前屏幕方向
  */
 - (void)interfaceOrientation:(UIInterfaceOrientation)orientation {
-    if ([[UIDevice currentDevice] respondsToSelector:@selector(setOrientation:)]) {
-        SEL selector = NSSelectorFromString(@"setOrientation:");
-        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[UIDevice instanceMethodSignatureForSelector:selector]];
-        [invocation setSelector:selector];
-        [invocation setTarget:[UIDevice currentDevice]];
-        int val = orientation;
-        [invocation setArgument:&val atIndex:2];
-        [invocation invoke];
+    
+    if (@available(iOS 16.0, *)) {
+        UIInterfaceOrientation orientationM = orientation;
+        UIInterfaceOrientationMask orMask = UIInterfaceOrientationMaskPortrait;
+        if (orientationM == UIInterfaceOrientationPortrait||UIInterfaceOrientationUnknown) {
+            orMask = UIInterfaceOrientationMaskPortrait;
+        }
+        else if (orientationM == UIInterfaceOrientationPortraitUpsideDown){
+            orMask = UIInterfaceOrientationMaskPortraitUpsideDown;
+        }
+        else if (orientationM == UIInterfaceOrientationLandscapeLeft){
+            orMask = UIInterfaceOrientationMaskLandscapeLeft;
+        }
+        else if (orientationM == UIInterfaceOrientationLandscapeRight){
+            orMask = UIInterfaceOrientationMaskLandscapeRight;
+        }
+        UIViewController *curVC = self;
+        UINavigationController *nav = self.navigationController;
+        SEL selUpdateSupportedMethod = NSSelectorFromString(@"setNeedsUpdateOfSupportedInterfaceOrientations");
+        if ([curVC respondsToSelector:selUpdateSupportedMethod]) {
+            (((void (*)(id, SEL))[curVC methodForSelector:selUpdateSupportedMethod])(curVC, selUpdateSupportedMethod));
+        }
+        if ([nav respondsToSelector:selUpdateSupportedMethod]) {
+            (((void (*)(id, SEL))[nav methodForSelector:selUpdateSupportedMethod])(nav, selUpdateSupportedMethod));
+        }
+        NSArray *array = [[[UIApplication sharedApplication] connectedScenes] allObjects];
+        UIWindowScene *ws = (UIWindowScene *)array.firstObject;
+        Class GeometryPreferences = NSClassFromString(@"UIWindowSceneGeometryPreferencesIOS");
+        id geometryPreferences = [[GeometryPreferences alloc] init];
+        [geometryPreferences setValue:@(orMask) forKey:@"interfaceOrientations"];
+        SEL selGeometryUpdateMethod = NSSelectorFromString(@"requestGeometryUpdateWithPreferences:errorHandler:");
+        void (^ErrorBlock)(NSError *error) = ^(NSError *error){
+            NSLog(@"iOS 16 转屏Error===%@",error);
+        };
+        if ([ws respondsToSelector:selGeometryUpdateMethod]) {
+            (((void (*)(id, SEL,id,id))[ws methodForSelector:selGeometryUpdateMethod])(ws, selGeometryUpdateMethod,geometryPreferences,ErrorBlock));
+        }
+        [UIViewController attemptRotationToDeviceOrientation];
+    }else{
+        if ([[UIDevice currentDevice] respondsToSelector:@selector(setOrientation:)]) {
+            SEL selector = NSSelectorFromString(@"setOrientation:");
+            NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[UIDevice instanceMethodSignatureForSelector:selector]];
+            [invocation setSelector:selector];
+            [invocation setTarget:[UIDevice currentDevice]];
+            [invocation setArgument:&(orientation) atIndex:2];
+            [invocation invoke];
+        }
     }
 }
 
@@ -80,7 +120,7 @@
 
 - (BOOL)prefersStatusBarHidden {
     if (self.viewPresented == YES) {
-        return !self.isPortrait;
+        return self.isPortrait;
     }else {
         self.viewPresented = YES;
         return NO;
@@ -89,7 +129,7 @@
 
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
-   
+
     [self getOrientation];
     NSLog(@"layout subviews");
 }
